@@ -1,4 +1,7 @@
-# test-adapter
+![Nuget](https://img.shields.io/nuget/v/Unicorn.TestAdapter?style=plastic)
+![Nuget](https://img.shields.io/nuget/dt/Unicorn.TestAdapter?style=plastic)
+
+# Test adapter
 
 To be able to run unicorn tests directly from Visual Studio tests explorer the adapter was implemented. Just add it as nuget package to all projects containing tests.
 
