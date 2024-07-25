@@ -47,9 +47,9 @@
 
   <Target Name="IncludeReferencedProjectInPackage" Condition="'$(IncludeBuildOutput)' != 'false'">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="bin\Release\$(TargetFramework)\Unicorn.Taf.Api.dll" PackagePath="build\$(TargetFramework)" />
-      <TfmSpecificPackageFile Include="bin\Release\$(TargetFramework)\Unicorn.Taf.Core.dll" PackagePath="build\$(TargetFramework)" />
-      <TfmSpecificPackageFile Include="bin\Release\$(TargetFramework)\Unicorn.TestAdapter.props" PackagePath="build\$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\Unicorn.Taf.Api.dll" PackagePath="build\$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\Unicorn.Taf.Core.dll" PackagePath="build\$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\Unicorn.TestAdapter.props" PackagePath="build\$(TargetFramework)" />
     </ItemGroup>
   </Target>
 
