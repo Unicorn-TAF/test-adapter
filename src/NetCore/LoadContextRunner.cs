@@ -1,15 +1,11 @@
 ﻿#if NET || NETCOREAPP
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Unicorn.Taf.Api;
 using Unicorn.Taf.Core;
 using Unicorn.Taf.Core.Engine;
-using TafTests = Unicorn.Taf.Core.Testing;
 
 namespace Unicorn.TestAdapter
 {
@@ -73,8 +69,8 @@ namespace Unicorn.TestAdapter
                 IOutcome ioutcome = runner.RunTests();
 
                 // Outcome transition between load contexts.
-                byte[] bytes = LoadContextSerealization.Serialize(ioutcome);
-                return LoadContextSerealization.Deserialize<LaunchOutcome>(bytes);
+                byte[] bytes = LoadContextSerialization.Serialize(ioutcome);
+                return LoadContextSerialization.Deserialize<LaunchOutcome>(bytes);
             }
             finally
             {

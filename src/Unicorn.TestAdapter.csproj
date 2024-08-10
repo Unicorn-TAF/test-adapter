@@ -12,14 +12,14 @@
       Unicorn is test automation framework which provides wide spectrum of functionality out of box to start efficient test automation process in short terms.
       This package includes VS adapter for Unicorn tests.
     </Description>
-    <Copyright>Copyright © 2022 Vitaliy Dobriyan</Copyright>
+    <Copyright>Copyright © 2024 Vitaliy Dobriyan</Copyright>
     <Version>3.1.0</Version>
     <FileVersion>3.1.0.0</FileVersion>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://bitbucket.org/dobriyanchik/unicorntools</RepositoryUrl>
-    <PackageProjectUrl>https://bitbucket.org/dobriyanchik/unicorntools</PackageProjectUrl>
-    <PackageTags>automation tests testadapter visualstudio dotnet unicorntaf</PackageTags>
+    <RepositoryUrl>https://github.com/Unicorn-TAF/test-adapter</RepositoryUrl>
+    <PackageProjectUrl>https://unicorn-taf.github.io</PackageProjectUrl>
+    <PackageTags>automation tests testadapter visualstudio dotnet unicorn-taf</PackageTags>
     <PackageReleaseNotes>Support of app.config, ability to read unicorn configuration from file specified in runsettings, fixes in launch outcome de-serialization.</PackageReleaseNotes>
     <PackageIcon>icon.png</PackageIcon>
     <PackageIconUrl />

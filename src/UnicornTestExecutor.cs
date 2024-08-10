@@ -5,76 +5,60 @@ using System.Linq;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
 using Unicorn.Taf.Core.Engine;
+using Unicorn.Taf.Core.Testing;
+using Unicorn.TestAdapter.Util;
+using UOutcome = Unicorn.Taf.Core.Testing.TestOutcome;
 
 namespace Unicorn.TestAdapter
 {
-    [ExtensionUri(ExecutorUriString)]
+    [ExtensionUri(Constants.ExecutorUriString)]
     public class UnicornTestExecutor : ITestExecutor
     {
-        internal const string ExecutorUriString = "executor://UnicornTestExecutor/v2";
-
-        private const string Prefix = "Unicorn Adapter: ";
-
-        private const string RunStart = Prefix + "test run starting";
-        private const string RunComplete = Prefix + "test run complete";
-        private const string RunInitFailed = Prefix + "test run initialization failed";
-        private const string RunnerError = Prefix + "runner error";
-        private const string NonVsRunDisabled = Prefix + "only run from Visual Studio is supported, exiting...";
-
-        internal static readonly Uri ExecutorUri = new Uri(ExecutorUriString);
+        private Logger logger;
 
         public void RunTests(IEnumerable<string> sources, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
-            if (string.IsNullOrEmpty(runContext.SolutionDirectory))
-            {
-                frameworkHandle.SendMessage(TestMessageLevel.Warning, NonVsRunDisabled);
-                return;
-            }
+            logger = new Logger(frameworkHandle);
+            logger.Info(Constants.RunStart + " (sources)");
 
-            frameworkHandle.SendMessage(TestMessageLevel.Informational, RunStart);
-
-            var runDir = ExecutorUtilities.PrepareRunDirectory(runContext.SolutionDirectory);
-            ExecutorUtilities.CopyDeploymentItems(runContext, runDir, frameworkHandle);
+            string runDir = FileUtils.PrepareRunDirectory(runContext, logger);
 
             foreach (var source in sources)
             {
-                ExecutorUtilities.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
+                logger.Info(Constants.RunFromContainer + source);
+                FileUtils.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
 
                 try
                 {
-                    var newSource = source.Replace(Path.GetDirectoryName(source), runDir);
-                    RunTests(newSource, new string[0], runContext, frameworkHandle);
+                    string newSource = source.Replace(Path.GetDirectoryName(source), runDir);
+                    LaunchOutcome outcome = RunTests(newSource, new string[0], runContext, frameworkHandle);
+                    ProcessLaunchOutcome(outcome, frameworkHandle, source);
                 }
                 catch (Exception ex)
                 {
-                    frameworkHandle.SendMessage(TestMessageLevel.Error, 
-                        RunnerError + Environment.NewLine + ex);
+                    logger.Error(Constants.RunnerError + Environment.NewLine + ex);
                 }
             }
 
-            frameworkHandle.SendMessage(TestMessageLevel.Informational, RunComplete);
+            logger.Info(Constants.RunComplete);
         }
+
 
         public void RunTests(IEnumerable<TestCase> tests, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
-            if (string.IsNullOrEmpty(runContext.SolutionDirectory))
-            {
-                frameworkHandle.SendMessage(TestMessageLevel.Warning, NonVsRunDisabled);
-                return;
-            }
+            logger = new Logger(frameworkHandle);
+            logger.Info(Constants.RunStart + " (tests)");
+
+            string runDir = FileUtils.PrepareRunDirectory(runContext, logger);
 
             var sources = tests.Select(t => t.Source).Distinct();
 
-            frameworkHandle.SendMessage(TestMessageLevel.Informational, RunStart);
-
-            var runDir = ExecutorUtilities.PrepareRunDirectory(runContext.SolutionDirectory);
-            ExecutorUtilities.CopyDeploymentItems(runContext, runDir, frameworkHandle);
-
             foreach (var source in sources)
             {
-                ExecutorUtilities.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
+                logger.Info(Constants.RunFromContainer + source);
+                FileUtils.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
+
                 var masks = tests.Select(t => t.FullyQualifiedName).ToArray();
 
                 try
@@ -85,30 +69,87 @@ namespace Unicorn.TestAdapter
                 }
                 catch (Exception ex)
                 {
-                    frameworkHandle.SendMessage(TestMessageLevel.Error, 
-                        RunnerError + Environment.NewLine + ex);
+                    logger.Error(Constants.RunnerError + Environment.NewLine + ex);
 
                     foreach (TestCase test in tests)
                     {
-                        ExecutorUtilities.SkipTest(test, ex.ToString(), frameworkHandle);
+                        ExecutorUtils.SkipTest(test, ex.ToString(), frameworkHandle);
                     }
                 }
             }
 
-            frameworkHandle.SendMessage(TestMessageLevel.Informational, RunComplete);
+            logger.Info(Constants.RunComplete);
+        }
+
+        public void Cancel() 
+        { 
+        }
+
+        private LaunchOutcome RunTests(
+            string assemblyPath, string[] testsMasks, IRunContext runContext, IFrameworkHandle frameworkHandle)
+        {
+            XElement runSettings = XDocument.Parse(runContext.RunSettings.SettingsXml).Element("RunSettings");
+
+            string unicornConfig = runSettings.Element("UnicornAdapter").Element("ConfigFile")?.Value;
+
+            if (string.IsNullOrEmpty(unicornConfig))
+            {
+                unicornConfig = runSettings.Element("TestRunParameters")?
+                .Elements("Parameter")
+                .FirstOrDefault(e => e.Attribute("name").Value.Equals("unicornConfig"))?
+                .Attribute("value").Value;
+            }
+
+            if (!string.IsNullOrEmpty(unicornConfig))
+            {
+                logger.Info("Using configuration file: " + unicornConfig);
+            }
+
+#if NET || NETCOREAPP
+            return LoadContextRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
+#else
+            return AppDomainRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
+#endif
+        }
+
+        private void ProcessLaunchOutcome(LaunchOutcome outcome, IFrameworkHandle fwHandle, string source)
+        {
+            if (!outcome.RunInitialized)
+            {
+                logger.Error(Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException);
+            }
+            else
+            {
+                List<TestCase> testCases = new List<TestCase>();
+
+                foreach (SuiteOutcome suiteOutcome in outcome.SuitesOutcomes)
+                {
+                    foreach (UOutcome testOutcome in suiteOutcome.TestsOutcomes)
+                    {
+                        TestCase testCase = testCases.FirstOrDefault(tc => Equals(tc.FullyQualifiedName, testOutcome.FullMethodName));
+
+                        if (testCase == null)
+                        {
+                            testCase = ExecutorUtils.GetTestCaseFrom(testOutcome, source);
+                            testCases.Add(testCase);
+                        }
+
+                        TestResult testResult = ExecutorUtils.GetTestResultFromOutcome(testOutcome, testCase);
+                        fwHandle.RecordResult(testResult);
+                    }
+                }
+            }
         }
 
         private void ProcessLaunchOutcome(LaunchOutcome outcome, IEnumerable<TestCase> tests, IFrameworkHandle fwHandle)
         {
             if (!outcome.RunInitialized)
             {
-                fwHandle.SendMessage(
-                    TestMessageLevel.Error,
-                    RunInitFailed + Environment.NewLine + outcome.RunnerException);
+                logger.Error(Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException);
 
                 foreach (TestCase test in tests)
                 {
-                    ExecutorUtilities.SkipTest(test, "Assembly initialization failed.\n" + outcome.RunnerException.ToString(), fwHandle);
+                    ExecutorUtils.SkipTest(test, Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException.ToString(), fwHandle);
                 }
             }
             else
@@ -123,44 +164,16 @@ namespace Unicorn.TestAdapter
                     {
                         foreach (var outcomeToRecord in outcomes)
                         {
-                            var testResult = ExecutorUtilities.GetTestResultFromOutcome(outcomeToRecord, test);
+                            var testResult = ExecutorUtils.GetTestResultFromOutcome(outcomeToRecord, test);
                             fwHandle.RecordResult(testResult);
                         }
                     }
                     else
                     {
-                        ExecutorUtilities.SkipTest(test, "Test was not executed, possibly it's disabled", fwHandle);
+                        ExecutorUtils.SkipTest(test, "Test was not executed, possibly it's disabled", fwHandle);
                     }
                 }
             }
-        }
-
-        public void Cancel() 
-        { 
-        }
-
-        private LaunchOutcome RunTests(
-            string assemblyPath, string[] testsMasks, IRunContext runContext, IFrameworkHandle frameworkHandle)
-        {
-            string unicornConfig = XDocument.Parse(runContext.RunSettings.SettingsXml)
-                .Element("RunSettings")
-                .Element("TestRunParameters")?
-                .Elements("Parameter")
-                .FirstOrDefault(e => e.Attribute("name").Value.Equals("unicornConfig"))?
-                .Attribute("value").Value;
-
-            if (!string.IsNullOrEmpty(unicornConfig))
-            {
-                frameworkHandle.SendMessage(
-                    TestMessageLevel.Informational,
-                    "Loading unicorn configuration file: " + unicornConfig);
-            }
-
-#if NET || NETCOREAPP
-            return LoadContextRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
-#else
-            return AppDomainRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
-#endif
         }
     }
 }
