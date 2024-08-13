@@ -12,10 +12,9 @@ namespace Unicorn.TestAdapter.Util
         {
             string outDir = $"{Environment.MachineName}_{DateTime.Now:MM-dd-yyyy_hh-mm}";
             string runDir = Path.Combine(runContext.TestRunDirectory, outDir);
+
             Directory.CreateDirectory(runDir);
-
-            logger.Info("run directory: " + runDir);
-
+            logger.Info("Run directory: " + runDir);
             CopyDeploymentItems(runContext, runDir, logger);
 
             return runDir;
@@ -56,33 +55,37 @@ namespace Unicorn.TestAdapter.Util
                 .Elements(nsa + "DeploymentItem")
                 .Select(d => d.Attribute("filename").Value);
 
-            foreach (var deploymentItem in deploymentItems)
+            foreach (string deploymentItem in deploymentItems)
             {
-                try
+                CopyItem(deploymentItem, runDir, runContext.SolutionDirectory, logger);
+            }
+        }
+
+        private static void CopyItem(string deploymentItem, string runDir, string solutionDir, Logger logger)
+        {
+            try
+            {
+                var item = Path.IsPathRooted(deploymentItem) ?
+                    deploymentItem :
+                    Path.Combine(solutionDir, deploymentItem);
+
+                var itemAttributes = File.GetAttributes(item);
+
+                if (itemAttributes.HasFlag(FileAttributes.Directory))
                 {
-                    var item = Path.IsPathRooted(deploymentItem) ?
-                        deploymentItem :
-                        Path.Combine(runContext.SolutionDirectory, deploymentItem);
-
-                    var itemAttributes = File.GetAttributes(item);
-
-                    if (itemAttributes.HasFlag(FileAttributes.Directory))
-                    {
-                        var itemDirectory = item.EndsWith("\\") ? Path.GetDirectoryName(item) : item;
-                        CopySourceFilesToRunDir(itemDirectory, runDir);
-                    }
-                    else
-                    {
-                        var itemDirectory = Path.GetDirectoryName(item);
-                        File.Copy(item, item.Replace(itemDirectory, runDir), true);
-                    }
+                    var itemDirectory = item.EndsWith("\\") ? Path.GetDirectoryName(item) : item;
+                    CopySourceFilesToRunDir(itemDirectory, runDir);
                 }
-                catch (Exception ex)
+                else
                 {
-                    logger.Error($"Unable to copy deployment item '{deploymentItem}': " + ex);
-                    throw;
+                    var itemDirectory = Path.GetDirectoryName(item);
+                    File.Copy(item, item.Replace(itemDirectory, runDir), true);
                 }
-
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Unable to copy deployment item '{deploymentItem}': " + ex);
+                throw;
             }
         }
     }

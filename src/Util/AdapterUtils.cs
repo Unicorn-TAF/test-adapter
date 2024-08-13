@@ -1,17 +1,34 @@
 ﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using System;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using UnicornTest = Unicorn.Taf.Core.Testing;
+using UnicornStatus = Unicorn.Taf.Core.Testing.Status;
 using UnicornOutcome = Unicorn.Taf.Core.Testing.TestOutcome;
+using System.Collections.Generic;
+using Unicorn.Taf.Core.Engine;
+using System.Xml.Linq;
+using System.Linq;
 
 
 namespace Unicorn.TestAdapter.Util
 {
-    internal class ExecutorUtils
+    internal class AdapterUtils
     {
+#if NET || NETCOREAPP
+        internal static List<TestInfo> GetTestInfos(string source) =>
+            LoadContextObserver.GetTestsInfoInIsolation(source);
+
+        internal static LaunchOutcome RunTestsInIsolation(string assemblyPath, string[] testsMasks, string unicornConfig) =>
+            LoadContextRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
+#else
+        internal static List<TestInfo> GetTestInfos(string source) =>
+            AppDomainObserver.GetTestsInfoInIsolation(source);
+
+        internal static LaunchOutcome RunTestsInIsolation(string assemblyPath, string[] testsMasks, string unicornConfig) =>
+            AppDomainRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
+#endif
+
         internal static void SkipTest(TestCase test, string reason, IFrameworkHandle frameworkHandle)
         {
             var testResult = new TestResult(test)
@@ -28,7 +45,7 @@ namespace Unicorn.TestAdapter.Util
             frameworkHandle.RecordResult(testResult);
         }
 
-        internal static TestResult GetTestResultFromOutcome(UnicornTest.TestOutcome outcome, TestCase testCase)
+        internal static TestResult GetTestResultFromOutcome(UnicornOutcome outcome, TestCase testCase)
         {
             var testResult = new TestResult(testCase)
             {
@@ -38,17 +55,17 @@ namespace Unicorn.TestAdapter.Util
 
             switch (outcome.Result)
             {
-                case UnicornTest.Status.Passed:
+                case UnicornStatus.Passed:
                     testResult.Outcome = TestOutcome.Passed;
                     testResult.Duration = outcome.ExecutionTime;
                     break;
-                case UnicornTest.Status.Failed:
+                case UnicornStatus.Failed:
                     testResult.Outcome = TestOutcome.Failed;
                     testResult.ErrorMessage = outcome.FailMessage;
                     testResult.ErrorStackTrace = outcome.FailStackTrace;
                     testResult.Duration = outcome.ExecutionTime;
                     break;
-                case UnicornTest.Status.Skipped:
+                case UnicornStatus.Skipped:
                     testResult.Outcome = TestOutcome.Skipped;
                     testResult.ErrorMessage = "Check for fails in: BeforeSuite, BeforeTest or test specified in DependsOn attribute.";
                     break;
@@ -80,9 +97,14 @@ namespace Unicorn.TestAdapter.Util
                 testcase.Traits.Add(new Trait("Author", testInfo.Author));
             }
 
-            if (testInfo.Categories.Any())
+            foreach (string category in testInfo.Categories)
             {
-                testcase.Traits.Add(new Trait("Categories", string.Join(",", testInfo.Categories)));
+                testcase.Traits.Add(new Trait(Constants.CategoryTrait, category));
+            }
+
+            foreach (string tag in testInfo.Tags)
+            {
+                testcase.Traits.Add(new Trait(Constants.TagTrait, tag));
             }
 
             if (testInfo.TestParametersCount > 0)
@@ -93,17 +115,24 @@ namespace Unicorn.TestAdapter.Util
             return testcase;
         }
 
-        internal static TestCase GetTestCaseFrom(UnicornOutcome outcome, string source)
+        internal static string GetUnicornConfigPath(string settingsXml)
         {
-            string fullName = outcome.FullMethodName;
+            XElement runSettings = XDocument.Parse(settingsXml).Element("RunSettings");
 
-            TestCase testcase = new TestCase(fullName, Constants.ExecutorUri, source)
+            string unicornConfig = runSettings.Element("UnicornAdapter")?
+                .Element("ConfigFile")?
+                .Value;
+
+            if (string.IsNullOrEmpty(unicornConfig))
             {
-                DisplayName = fullName.Substring(fullName.LastIndexOf(".") + 1),
-                Id = GuidFromString(fullName)
-            };
+                unicornConfig = runSettings.Element("TestRunParameters")?
+                .Elements("Parameter")
+                .FirstOrDefault(e => e.Attribute("name").Value.Equals("unicornConfig"))?
+                .Attribute("value")
+                .Value;
+            }
 
-            return testcase;
+            return unicornConfig;
         }
 
         private static Guid GuidFromString(string data)

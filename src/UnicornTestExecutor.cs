@@ -2,13 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Unicorn.Taf.Core.Engine;
-using Unicorn.Taf.Core.Testing;
 using Unicorn.TestAdapter.Util;
-using UOutcome = Unicorn.Taf.Core.Testing.TestOutcome;
 
 namespace Unicorn.TestAdapter
 {
@@ -20,123 +17,86 @@ namespace Unicorn.TestAdapter
         public void RunTests(IEnumerable<string> sources, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
             logger = new Logger(frameworkHandle);
-            logger.Info(Constants.RunStart + " (sources)");
+            logger.Info(Constants.RunStart);
 
             string runDir = FileUtils.PrepareRunDirectory(runContext, logger);
 
-            foreach (var source in sources)
+            foreach (string source in sources)
             {
-                logger.Info(Constants.RunFromContainer + source);
-                FileUtils.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
-
                 try
                 {
-                    string newSource = source.Replace(Path.GetDirectoryName(source), runDir);
-                    LaunchOutcome outcome = RunTests(newSource, new string[0], runContext, frameworkHandle);
-                    ProcessLaunchOutcome(outcome, frameworkHandle, source);
+                    TestCaseFilter filter = new TestCaseFilter(runContext, logger, source);
+                    List<TestInfo> testsInfos = AdapterUtils.GetTestInfos(source);
+
+                    // Collecting only test cases matching filters
+                    IEnumerable<TestCase> testcases = testsInfos
+                        .Select(testInfo => AdapterUtils.GetTestCaseFrom(testInfo, source))
+                        .Where(testcase => filter.MatchTestCase(testcase));
+
+                    logger.Info("Source {0}: found total {1} tests, {2} tests match run filter",
+                        Path.GetFileName(source), testsInfos.Count, testcases.Count());
+
+                    RunTestsForSource(testcases, runContext, frameworkHandle, source, runDir);
                 }
                 catch (Exception ex)
                 {
-                    logger.Error(Constants.RunnerError + Environment.NewLine + ex);
+                    logger.Error($"Error executing tests from {source} source: {ex.Message}");
                 }
             }
-
-            logger.Info(Constants.RunComplete);
         }
-
 
         public void RunTests(IEnumerable<TestCase> tests, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
             logger = new Logger(frameworkHandle);
-            logger.Info(Constants.RunStart + " (tests)");
+            logger.Info(Constants.RunStart);
 
             string runDir = FileUtils.PrepareRunDirectory(runContext, logger);
-
             var sources = tests.Select(t => t.Source).Distinct();
 
             foreach (var source in sources)
             {
-                logger.Info(Constants.RunFromContainer + source);
-                FileUtils.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
-
-                var masks = tests.Select(t => t.FullyQualifiedName).ToArray();
-
-                try
-                {
-                    var newSource = source.Replace(Path.GetDirectoryName(source), runDir);
-                    LaunchOutcome outcome = RunTests(newSource, masks, runContext, frameworkHandle);
-                    ProcessLaunchOutcome(outcome, tests, frameworkHandle);
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(Constants.RunnerError + Environment.NewLine + ex);
-
-                    foreach (TestCase test in tests)
-                    {
-                        ExecutorUtils.SkipTest(test, ex.ToString(), frameworkHandle);
-                    }
-                }
+                RunTestsForSource(tests, runContext, frameworkHandle, source, runDir);
             }
-
-            logger.Info(Constants.RunComplete);
         }
 
         public void Cancel() 
         { 
         }
 
-        private LaunchOutcome RunTests(
-            string assemblyPath, string[] testsMasks, IRunContext runContext, IFrameworkHandle frameworkHandle)
+        public void RunTestsForSource(
+            IEnumerable<TestCase> tests, 
+            IRunContext runContext, 
+            IFrameworkHandle frameworkHandle, 
+            string source, 
+            string runDir)
         {
-            XElement runSettings = XDocument.Parse(runContext.RunSettings.SettingsXml).Element("RunSettings");
+            logger.Info(Constants.RunFromContainer + source);
+            FileUtils.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
 
-            string unicornConfig = runSettings.Element("UnicornAdapter").Element("ConfigFile")?.Value;
+            string[] testsMasks = tests.Select(t => t.FullyQualifiedName).ToArray();
 
-            if (string.IsNullOrEmpty(unicornConfig))
+            try
             {
-                unicornConfig = runSettings.Element("TestRunParameters")?
-                .Elements("Parameter")
-                .FirstOrDefault(e => e.Attribute("name").Value.Equals("unicornConfig"))?
-                .Attribute("value").Value;
-            }
+                string assemblyPath = source.Replace(Path.GetDirectoryName(source), runDir);
+                string unicornConfig = AdapterUtils.GetUnicornConfigPath(runContext.RunSettings.SettingsXml);
 
-            if (!string.IsNullOrEmpty(unicornConfig))
-            {
-                logger.Info("Using configuration file: " + unicornConfig);
-            }
-
-#if NET || NETCOREAPP
-            return LoadContextRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
-#else
-            return AppDomainRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
-#endif
-        }
-
-        private void ProcessLaunchOutcome(LaunchOutcome outcome, IFrameworkHandle fwHandle, string source)
-        {
-            if (!outcome.RunInitialized)
-            {
-                logger.Error(Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException);
-            }
-            else
-            {
-                List<TestCase> testCases = new List<TestCase>();
-
-                foreach (SuiteOutcome suiteOutcome in outcome.SuitesOutcomes)
+                if (!string.IsNullOrEmpty(unicornConfig))
                 {
-                    foreach (UOutcome testOutcome in suiteOutcome.TestsOutcomes)
-                    {
-                        TestCase testCase = testCases.FirstOrDefault(tc => Equals(tc.FullyQualifiedName, testOutcome.FullMethodName));
+                    logger.Info("Using configuration file: " + unicornConfig);
+                }
 
-                        if (testCase == null)
-                        {
-                            testCase = ExecutorUtils.GetTestCaseFrom(testOutcome, source);
-                            testCases.Add(testCase);
-                        }
+                LaunchOutcome outcome = AdapterUtils.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
 
-                        TestResult testResult = ExecutorUtils.GetTestResultFromOutcome(testOutcome, testCase);
-                        fwHandle.RecordResult(testResult);
-                    }
+                logger.Info(Constants.RunComplete);
+                ProcessLaunchOutcome(outcome, tests, frameworkHandle);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(Constants.RunnerError + Environment.NewLine + ex);
+
+                foreach (TestCase test in tests)
+                {
+                    AdapterUtils.SkipTest(test, ex.ToString(), frameworkHandle);
                 }
             }
         }
@@ -149,29 +109,29 @@ namespace Unicorn.TestAdapter
 
                 foreach (TestCase test in tests)
                 {
-                    ExecutorUtils.SkipTest(test, Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException.ToString(), fwHandle);
+                    AdapterUtils.SkipTest(test, Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException.ToString(), fwHandle);
                 }
-            }
-            else
-            {
-                foreach (TestCase test in tests)
-                {
-                    var outcomes = outcome.SuitesOutcomes
-                        .SelectMany(so => so.TestsOutcomes)
-                        .Where(to => to.FullMethodName.Equals(test.FullyQualifiedName));
 
-                    if (outcomes.Any())
+                return;
+            }
+
+            foreach (TestCase test in tests)
+            {
+                var outcomes = outcome.SuitesOutcomes
+                    .SelectMany(so => so.TestsOutcomes)
+                    .Where(to => to.FullMethodName.Equals(test.FullyQualifiedName));
+
+                if (outcomes.Any())
+                {
+                    foreach (var outcomeToRecord in outcomes)
                     {
-                        foreach (var outcomeToRecord in outcomes)
-                        {
-                            var testResult = ExecutorUtils.GetTestResultFromOutcome(outcomeToRecord, test);
-                            fwHandle.RecordResult(testResult);
-                        }
+                        var testResult = AdapterUtils.GetTestResultFromOutcome(outcomeToRecord, test);
+                        fwHandle.RecordResult(testResult);
                     }
-                    else
-                    {
-                        ExecutorUtils.SkipTest(test, "Test was not executed, possibly it's disabled", fwHandle);
-                    }
+                }
+                else
+                {
+                    AdapterUtils.SkipTest(test, "Test was not executed, possibly it's disabled", fwHandle);
                 }
             }
         }

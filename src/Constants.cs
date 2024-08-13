@@ -2,7 +2,7 @@
 
 namespace Unicorn.TestAdapter
 {
-    internal class Constants
+    internal static class Constants
     {
         internal const string ExecutorUriString = "executor://UnicornTestExecutor/v3";
 
@@ -15,5 +15,11 @@ namespace Unicorn.TestAdapter
         internal const string DiscoveryComplete = "Test discovery complete";
 
         internal static readonly Uri ExecutorUri = new Uri(ExecutorUriString);
+
+        internal const string CategoryTrait = "Category";
+        internal const string TagTrait = "Tag";
+
+        internal const string DisplayNameString = "DisplayName";
+        internal const string FullyQualifiedNameString = "FullyQualifiedName";
     }
 }

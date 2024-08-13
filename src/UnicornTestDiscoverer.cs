@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
@@ -25,7 +26,22 @@ namespace Unicorn.TestAdapter
             {
                 try
                 {
-                    DiscoverAssembly(source, loggerInstance, discoverySink);
+                    TestCaseFilter filter = new TestCaseFilter(discoveryContext, loggerInstance);
+                    List<TestInfo> testsInfos = AdapterUtils.GetTestInfos(source);
+
+                    // Collecting only test cases matching filters
+                    IEnumerable<TestCase> testcases = testsInfos
+                        .Select(testInfo => AdapterUtils.GetTestCaseFrom(testInfo, source))
+                        .Where(testcase => filter.MatchTestCase(testcase));
+
+                    loggerInstance.Info("Source {0}: found total {1} tests, {2} tests match filter",
+                        Path.GetFileName(source), testsInfos.Count, testcases.Count());
+
+                    foreach (TestCase testcase in testcases)
+                    {
+                        discoverySink.SendTestCase(testcase);
+                    }
+
                 }
                 catch (Exception ex)
                 {
@@ -34,23 +50,6 @@ namespace Unicorn.TestAdapter
             }
 
             loggerInstance.Info(Constants.DiscoveryComplete);
-        }
-
-        private static void DiscoverAssembly(string source, Logger logger, ITestCaseDiscoverySink discoverySink)
-        {
-#if NET || NETCOREAPP
-            List<TestInfo> testsInfos = LoadContextObserver.GetTestsInfoInIsolation(source);
-#else
-            List<TestInfo> testsInfos = AppDomainObserver.GetTestsInfoInIsolation(source);
-#endif
-
-            logger.Info($"Source: {Path.GetFileName(source)} (found {testsInfos.Count} tests)");
-
-            foreach (TestInfo testInfo in testsInfos)
-            {
-                TestCase testcase = ExecutorUtils.GetTestCaseFrom(testInfo, source);
-                discoverySink.SendTestCase(testcase);
-            }
         }
     }
 }
