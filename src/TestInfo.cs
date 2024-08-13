@@ -25,7 +25,8 @@ namespace Unicorn.TestAdapter
             TestAttribute titleAttribute = methodInfo.GetCustomAttribute<TestAttribute>();
             Title = string.IsNullOrEmpty(titleAttribute.Title) ? MethodName : titleAttribute.Title;
 
-            Disabled = methodInfo.IsDefined(typeof(DisabledAttribute), true);
+            Disabled = methodInfo.IsDefined(typeof(DisabledAttribute), true) || 
+                methodInfo.DeclaringType.IsDefined(typeof(DisabledAttribute), true);
 
             AuthorAttribute authorAttribute = methodInfo.GetCustomAttribute<AuthorAttribute>(true);
             Author = authorAttribute != null ? authorAttribute.Author : null;

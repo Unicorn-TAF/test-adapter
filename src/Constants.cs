@@ -18,6 +18,7 @@ namespace Unicorn.TestAdapter
 
         internal const string CategoryTrait = "Category";
         internal const string TagTrait = "Tag";
+        internal const string DisabledTrait = "Disabled";
 
         internal const string DisplayNameString = "DisplayName";
         internal const string FullyQualifiedNameString = "FullyQualifiedName";
