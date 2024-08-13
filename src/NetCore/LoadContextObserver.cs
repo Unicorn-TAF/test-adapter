@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using Unicorn.Taf.Api;
 using Unicorn.Taf.Core.Engine;
 using Unicorn.Taf.Core.Testing.Attributes;
+using Unicorn.TestAdapter.NetCore;
 
 namespace Unicorn.TestAdapter
 {
@@ -57,8 +58,8 @@ namespace Unicorn.TestAdapter
                 IOutcome iTestInfo = observer.CollectData(testAssembly);
 
                 //Outcome transition between load contexts.
-                byte[] bytes = LoadContextSerealization.Serialize(iTestInfo);
-                ObserverOutcome outcome = LoadContextSerealization.Deserialize<ObserverOutcome>(bytes);
+                byte[] bytes = LoadContextSerialization.Serialize(iTestInfo);
+                ObserverOutcome outcome = LoadContextSerialization.Deserialize<ObserverOutcome>(bytes);
 
                 return outcome.TestInfoList;
             }

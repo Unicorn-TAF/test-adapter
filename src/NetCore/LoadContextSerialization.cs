@@ -5,7 +5,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Unicorn.TestAdapter
 {
-    internal class LoadContextSerealization
+    internal class LoadContextSerialization
     {
         internal static byte[] Serialize(object data)
         {

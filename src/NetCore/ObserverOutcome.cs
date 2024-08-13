@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Unicorn.Taf.Api;
 
-namespace Unicorn.TestAdapter
+namespace Unicorn.TestAdapter.NetCore
 {
     /// <summary>
     /// Represents outcome of tests observer.

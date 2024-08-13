@@ -48,8 +48,6 @@ namespace Unicorn.TestAdapter
         {
             if (!string.IsNullOrEmpty(unicornConfig))
             {
-                //string assemblyDirectory = Path.GetDirectoryName(assemblyPath);
-                //string configPath = Path.Combine(assemblyDirectory, unicornConfig);
                 Config.FillFromFile(unicornConfig);
             }
 

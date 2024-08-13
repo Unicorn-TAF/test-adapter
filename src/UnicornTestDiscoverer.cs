@@ -3,92 +3,53 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.Serialization.Formatters.Binary;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
-using Unicorn.Taf.Api;
+using Unicorn.TestAdapter.Util;
 
 namespace Unicorn.TestAdapter
 {
-    [DefaultExecutorUri(UnicornTestExecutor.ExecutorUriString)]
+    [Category("managed")]
     [FileExtension(".dll")]
     [FileExtension(".exe")]
-    [Category("managed")]
+    [DefaultExecutorUri(Constants.ExecutorUriString)]
     public class UnicornTestDiscoverer : ITestDiscoverer
     {
-        private const string Prefix = "Unicorn Adapter: ";
-
-        public void DiscoverTests(IEnumerable<string> sources, IDiscoveryContext discoveryContext,
+        public void DiscoverTests(IEnumerable<string> sources, IDiscoveryContext discoveryContext, 
             IMessageLogger logger, ITestCaseDiscoverySink discoverySink)
         {
-            logger?.SendMessage(TestMessageLevel.Informational, Prefix + "test discovery starting");
+            Logger loggerInstance = new Logger(logger);
+            loggerInstance.Info(Constants.DiscoveryStarted);
 
             foreach (string source in sources)
             {
                 try
                 {
-                    DiscoverAssembly(source, logger, discoverySink);
+                    TestCaseFilter filter = new TestCaseFilter(discoveryContext, loggerInstance);
+                    List<TestInfo> testsInfos = AdapterUtils.GetTestInfos(source);
+
+                    // Collecting only test cases matching filters
+                    IEnumerable<TestCase> testcases = testsInfos
+                        .Select(testInfo => AdapterUtils.GetTestCaseFrom(testInfo, source))
+                        .Where(testcase => filter.MatchTestCase(testcase));
+
+                    loggerInstance.Info("Source {0}: found total {1} tests, {2} tests match filter",
+                        Path.GetFileName(source), testsInfos.Count, testcases.Count());
+
+                    foreach (TestCase testcase in testcases)
+                    {
+                        discoverySink.SendTestCase(testcase);
+                    }
+
                 }
                 catch (Exception ex)
                 {
-                    logger?.SendMessage(TestMessageLevel.Error, 
-                        Prefix + $"error discovering {source} source: {ex.Message}");
+                    loggerInstance.Error($"Error discovering {source} source: {ex.Message}");
                 }
             }
 
-            logger?.SendMessage(TestMessageLevel.Informational, Prefix + "test discovery complete");
-        }
-
-        private static void DiscoverAssembly(string source, IMessageLogger logger, ITestCaseDiscoverySink discoverySink)
-        {
-            List<TestInfo> testsInfos = GetTestsInfo(source);
-
-            logger?.SendMessage(TestMessageLevel.Informational, 
-                $"Source: {Path.GetFileName(source)} (found {testsInfos.Count} tests)");
-
-            foreach (TestInfo testInfo in testsInfos)
-            {
-                string fullName = testInfo.ClassPath + "." + testInfo.MethodName;
-
-                TestCase testcase = new TestCase(fullName, UnicornTestExecutor.ExecutorUri, source)
-                {
-                    DisplayName = testInfo.MethodName,
-                };
-
-                if (testInfo.Disabled)
-                {
-                    testcase.Traits.Add(new Trait("Disabled", string.Empty));
-                }
-
-                if (!string.IsNullOrEmpty(testInfo.Author))
-                {
-                    testcase.Traits.Add(new Trait("Author", testInfo.Author));
-                }
-
-                if (testInfo.Categories.Any())
-                {
-                    testcase.Traits.Add(new Trait("Categories", string.Join(",", testInfo.Categories)));
-                }
-
-                if (testInfo.TestParametersCount > 0)
-                {
-                    testcase.Traits.Add(new Trait("Parameters", testInfo.TestParametersCount.ToString()));
-                }
-
-                discoverySink.SendTestCase(testcase);
-            }
-        }
-
-        private static List<TestInfo> GetTestsInfo(string source)
-        {
-#if NET || NETCOREAPP
-            return LoadContextObserver.GetTestsInfoInIsolation(source);
-#else
-            return AppDomainObserver.GetTestsInfoInIsolation(source);
-#endif
+            loggerInstance.Info(Constants.DiscoveryComplete);
         }
     }
 }

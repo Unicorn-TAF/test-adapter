@@ -34,6 +34,11 @@ namespace Unicorn.TestAdapter
 
             Categories = new ReadOnlyCollection<string>(categoryAttributes.Select(a => a.Category).ToList());
 
+
+            IEnumerable<TagAttribute> tagsAttributes = methodInfo.DeclaringType.GetCustomAttributes<TagAttribute>(true);
+
+            Tags = new ReadOnlyCollection<string>(tagsAttributes.Select(a => a.Tag).ToList());
+
             TestParametersCount = 
                 methodInfo.IsDefined(typeof(TestDataAttribute), true) ? methodInfo.GetParameters().Length : 0;
         }
@@ -67,6 +72,11 @@ namespace Unicorn.TestAdapter
         /// Gets collection of test categories.
         /// </summary>
         public ReadOnlyCollection<string> Categories { get; }
+
+        /// <summary>
+        /// Gets collection of test tags.
+        /// </summary>
+        public ReadOnlyCollection<string> Tags { get; }
 
         /// <summary>
         /// Gets count of test parameters.
