@@ -86,10 +86,10 @@ namespace Unicorn.TestAdapter.Util
                 DisplayName = testInfo.MethodName,
                 Id = GuidFromString(fullName)
             };
-
+            
             if (testInfo.Disabled)
             {
-                testcase.Traits.Add(new Trait("Disabled", string.Empty));
+                testcase.Traits.Add(new Trait(Constants.DisabledTrait, "true"));
             }
 
             if (!string.IsNullOrEmpty(testInfo.Author))

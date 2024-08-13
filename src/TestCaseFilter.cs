@@ -14,7 +14,7 @@ namespace Unicorn.TestAdapter
         private const string FullyQualifiedName = "FullyQualifiedName";
 
         private readonly HashSet<string> _filterableTraits = 
-            new HashSet<string>() { Constants.CategoryTrait, Constants.TagTrait };
+            new HashSet<string>() { Constants.CategoryTrait, Constants.TagTrait, Constants.DisabledTrait };
 
         private readonly List<string> _supportedPropertyNames;
         private readonly ITestCaseFilterExpression _filterExpression;
