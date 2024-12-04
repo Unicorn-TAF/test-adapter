@@ -17,9 +17,9 @@ To use custom unicorn settings from file when running tests via tests explorer j
 By default test adapter runs tests from build output directory and stores results there.  
 It's possible to change defaults using _.runsettings_. It could be done by adding:
 ```xml
-<RunConfiguration>
+<UnicornAdapter>
   <ResultsDirectory>.\TestResults</ResultsDirectory>
-</RunConfiguration>
+</UnicornAdapter>
 ```
 
 In this case in solution root `TestResults` directory will be created. Each test run will have own directory named by template `$"{Environment.MachineName}_{DateTime.Now:MM-dd-yyyy_hh-mm}"`

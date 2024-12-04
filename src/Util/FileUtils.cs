@@ -10,13 +10,12 @@ namespace Unicorn.TestAdapter.Util
     {
         internal static string PrepareRunDirectory(IRunContext runContext, Logger logger)
         {
-
             string resultsDirectory = GetResultsDirectory(runContext.RunSettings.SettingsXml);
 
             if (resultsDirectory != null)
             {
                 string outDir = $"{Environment.MachineName}_{DateTime.Now:MM-dd-yyyy_hh-mm}";
-                string runDir = Path.Combine(resultsDirectory, outDir);
+                string runDir = Path.Combine(runContext.SolutionDirectory, resultsDirectory, outDir);
 
                 Directory.CreateDirectory(runDir);
                 logger.Info("Run directory: " + runDir);
@@ -33,7 +32,7 @@ namespace Unicorn.TestAdapter.Util
         }
 
         internal static string GetResultsDirectory(string settingsXml) =>
-            XDocument.Parse(settingsXml).Element("RunSettings").Element("RunConfiguration")?.Element("ResultsDirectory")?.Value;
+            XDocument.Parse(settingsXml).Element("RunSettings").Element("UnicornAdapter")?.Element("ResultsDirectory")?.Value;
 
         internal static void CopyBuildToRunDir(string sourceDir, string targetDir)
         {
