@@ -10,20 +10,40 @@ namespace Unicorn.TestAdapter.Util
     {
         internal static string PrepareRunDirectory(IRunContext runContext, Logger logger)
         {
-            string outDir = $"{Environment.MachineName}_{DateTime.Now:MM-dd-yyyy_hh-mm}";
-            string runDir = Path.Combine(runContext.TestRunDirectory, outDir);
 
-            Directory.CreateDirectory(runDir);
-            logger.Info("Run directory: " + runDir);
-            CopyDeploymentItems(runContext, runDir, logger);
+            string resultsDirectory = GetResultsDirectory(runContext.RunSettings.SettingsXml);
 
-            return runDir;
+            if (resultsDirectory != null)
+            {
+                string outDir = $"{Environment.MachineName}_{DateTime.Now:MM-dd-yyyy_hh-mm}";
+                string runDir = Path.Combine(resultsDirectory, outDir);
+
+                Directory.CreateDirectory(runDir);
+                logger.Info("Run directory: " + runDir);
+
+                CopyDeploymentItems(runContext, runDir, logger);
+                return runDir;
+            }
+            else
+            {
+                logger.Info("Run directory: current build directory");
+                return null;
+            }
+            
         }
 
-        internal static void CopySourceFilesToRunDir(string sourceDir, string targetDir)
+        internal static string GetResultsDirectory(string settingsXml) =>
+            XDocument.Parse(settingsXml).Element("RunSettings").Element("RunConfiguration")?.Element("ResultsDirectory")?.Value;
+
+        internal static void CopyBuildToRunDir(string sourceDir, string targetDir)
         {
-            Array.ForEach(Directory.GetFiles(sourceDir), s =>
-                File.Copy(s, s.Replace(sourceDir, targetDir), true));
+            DirectoryInfo diSource = new DirectoryInfo(sourceDir);
+            DirectoryInfo diDest = new DirectoryInfo(targetDir);
+
+            if (diSource.Name != diDest.Name)
+            {
+                CopyAll(diSource, diDest, true);
+            }
         }
 
         internal static void CopyDeploymentItems(IRunContext runContext, string runDir, Logger logger)
@@ -74,7 +94,7 @@ namespace Unicorn.TestAdapter.Util
                 if (itemAttributes.HasFlag(FileAttributes.Directory))
                 {
                     var itemDirectory = item.EndsWith("\\") ? Path.GetDirectoryName(item) : item;
-                    CopySourceFilesToRunDir(itemDirectory, runDir);
+                    CopyBuildToRunDir(itemDirectory, runDir);
                 }
                 else
                 {
@@ -86,6 +106,28 @@ namespace Unicorn.TestAdapter.Util
             {
                 logger.Error($"Unable to copy deployment item '{deploymentItem}': " + ex);
                 throw;
+            }
+        }
+
+        private static void CopyAll(DirectoryInfo source, DirectoryInfo dest, bool copySubDirs)
+        {
+            DirectoryInfo[] dirs = source.GetDirectories();
+            FileInfo[] files = source.GetFiles();
+
+            foreach (FileInfo file in files)
+            {
+                string temppath = Path.Combine(dest.FullName, file.Name);
+                file.CopyTo(temppath, false);
+            }
+
+            if (copySubDirs)
+            {
+                foreach (DirectoryInfo subdir in dirs)
+                {
+                    string temppath = Path.Combine(dest.FullName, subdir.Name);
+                    Directory.CreateDirectory(temppath);
+                    CopyAll(subdir, new DirectoryInfo(temppath), copySubDirs);
+                }
             }
         }
     }

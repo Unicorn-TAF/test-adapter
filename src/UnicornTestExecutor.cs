@@ -71,13 +71,22 @@ namespace Unicorn.TestAdapter
             string runDir)
         {
             logger.Info(Constants.RunFromContainer + source);
-            FileUtils.CopySourceFilesToRunDir(Path.GetDirectoryName(source), runDir);
+            string sourceDirectory = Path.GetDirectoryName(source);
+
+            if (string.IsNullOrEmpty(runDir))
+            {
+                runDir = sourceDirectory;
+            }
+            else
+            {
+                FileUtils.CopyBuildToRunDir(sourceDirectory, runDir);
+            }
 
             string[] testsMasks = tests.Select(t => t.FullyQualifiedName).ToArray();
 
             try
             {
-                string assemblyPath = source.Replace(Path.GetDirectoryName(source), runDir);
+                string assemblyPath = source.Replace(sourceDirectory, runDir);
                 string unicornConfig = AdapterUtils.GetUnicornConfigPath(runContext.RunSettings.SettingsXml);
 
                 if (!string.IsNullOrEmpty(unicornConfig))

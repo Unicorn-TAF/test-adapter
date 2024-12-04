@@ -3,7 +3,7 @@
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace Unicorn.TestAdapter
+namespace Unicorn.TestAdapter.NetCore
 {
     internal class LoadContextSerialization
     {
