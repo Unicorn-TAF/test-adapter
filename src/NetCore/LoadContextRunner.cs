@@ -7,7 +7,7 @@ using Unicorn.Taf.Api;
 using Unicorn.Taf.Core;
 using Unicorn.Taf.Core.Engine;
 
-namespace Unicorn.TestAdapter
+namespace Unicorn.TestAdapter.NetCore
 {
     /// <summary>
     /// Provides ability to run unicorn tests in dedicated AppDomain.
@@ -65,7 +65,6 @@ namespace Unicorn.TestAdapter
 
                 ITestRunner runner = Activator.CreateInstance(runnerType, testAssembly, testsMasks, unicornConfig) as ITestRunner;
                 
-                Environment.CurrentDirectory = Path.GetDirectoryName(assemblyPath);
                 IOutcome ioutcome = runner.RunTests();
 
                 // Outcome transition between load contexts.

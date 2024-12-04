@@ -1,15 +1,14 @@
 ﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using UnicornStatus = Unicorn.Taf.Core.Testing.Status;
-using UnicornOutcome = Unicorn.Taf.Core.Testing.TestOutcome;
-using System.Collections.Generic;
-using Unicorn.Taf.Core.Engine;
 using System.Xml.Linq;
-using System.Linq;
-
+using Unicorn.Taf.Core.Engine;
+using UnicornOutcome = Unicorn.Taf.Core.Testing.TestOutcome;
+using UnicornStatus = Unicorn.Taf.Core.Testing.Status;
 
 namespace Unicorn.TestAdapter.Util
 {
@@ -17,16 +16,16 @@ namespace Unicorn.TestAdapter.Util
     {
 #if NET || NETCOREAPP
         internal static List<TestInfo> GetTestInfos(string source) =>
-            LoadContextObserver.GetTestsInfoInIsolation(source);
+            NetCore.LoadContextObserver.GetTestsInfoInIsolation(source);
 
         internal static LaunchOutcome RunTestsInIsolation(string assemblyPath, string[] testsMasks, string unicornConfig) =>
-            LoadContextRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
+            NetCore.LoadContextRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
 #else
         internal static List<TestInfo> GetTestInfos(string source) =>
-            AppDomainObserver.GetTestsInfoInIsolation(source);
+            NetFramework.AppDomainObserver.GetTestsInfoInIsolation(source);
 
         internal static LaunchOutcome RunTestsInIsolation(string assemblyPath, string[] testsMasks, string unicornConfig) =>
-            AppDomainRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
+            NetFramework.AppDomainRunner.RunTestsInIsolation(assemblyPath, testsMasks, unicornConfig);
 #endif
 
         internal static void SkipTest(TestCase test, string reason, IFrameworkHandle frameworkHandle)

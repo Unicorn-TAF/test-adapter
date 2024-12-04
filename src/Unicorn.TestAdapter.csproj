@@ -1,40 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net452;net5.0</TargetFrameworks>
+    <TargetFrameworks>net462;netcoreapp3.1</TargetFrameworks>
+    <NuspecProperties>version=$(Version)</NuspecProperties>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeReferencedProjectInPackage</TargetsForTfmSpecificContentInPackage>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Company>Vitaliy Dobriyan</Company>
-    <Authors>Vitaliy Dobriyan</Authors>
-    <Title>Unicorn.TestAdapter</Title>
-    <Description>
-      Unicorn is test automation framework which provides wide spectrum of functionality out of box to start efficient test automation process in short terms.
-      This package includes VS adapter for Unicorn tests.
-    </Description>
-    <Copyright>Copyright © 2024 Vitaliy Dobriyan</Copyright>
-    <Version>3.2.0</Version>
-    <FileVersion>3.2.0.0</FileVersion>
-    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/Unicorn-TAF/test-adapter</RepositoryUrl>
-    <PackageProjectUrl>https://unicorn-taf.github.io</PackageProjectUrl>
-    <PackageTags>unicorn-taf automation tests testadapter visualstudio dotnet</PackageTags>
-    <PackageReleaseNotes>Support of dotnet test, tests filtering, enhanced Traits.</PackageReleaseNotes>
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageIconUrl />
-    <BuildOutputTargetFolder>build</BuildOutputTargetFolder>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Unicorn.Taf.Core" Version="3.3.0" PrivateAssets="All" /> 
+    <PackageReference Include="Unicorn.Taf.Core" Version="4.0.0"/> 
   </ItemGroup>
   
-  <ItemGroup Condition="'$(TargetFramework)' == 'net452'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
     <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="11.0.0" PrivateAssets="All" />
   </ItemGroup>
   
-  <ItemGroup Condition="'$(TargetFramework)' != 'net452'">
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
     <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="15.0.0" PrivateAssets="All" />
   </ItemGroup>
 
@@ -43,29 +23,4 @@
       <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'Microsoft.VisualStudio.TestPlatform.ObjectModel'" />
     </ItemGroup>
   </Target>
-
-  <Target Name="IncludeReferencedProjectInPackage" Condition="'$(IncludeBuildOutput)' != 'false'">
-    <ItemGroup>
-      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\Unicorn.Taf.Api.dll" PackagePath="build\$(TargetFramework)" />
-      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\Unicorn.Taf.Core.dll" PackagePath="build\$(TargetFramework)" />
-      <TfmSpecificPackageFile Include="bin\$(Configuration)\$(TargetFramework)\Unicorn.TestAdapter.props" PackagePath="build\$(TargetFramework)" />
-    </ItemGroup>
-  </Target>
-
-  <ItemGroup>
-    <None Include="..\icon.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-    <None Include="..\LICENSE.txt">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Unicorn.TestAdapter.props">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

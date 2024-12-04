@@ -45,7 +45,14 @@ namespace Unicorn.TestAdapter
                 }
                 catch (Exception ex)
                 {
-                    loggerInstance.Error($"Error discovering {source} source: {ex.Message}");
+                    if (ex.Message.Contains("Could not load file or assembly 'Unicorn.TestAdapter"))
+                    {
+                        loggerInstance.Info($"{source} has no dependency on test adapter, discovery skipped");
+                    }
+                    else
+                    {
+                        loggerInstance.Error($"Error discovering {source} source: {ex.Message}");
+                    }
                 }
             }
 

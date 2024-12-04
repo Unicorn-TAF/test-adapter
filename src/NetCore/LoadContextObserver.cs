@@ -8,9 +8,8 @@ using System.Runtime.CompilerServices;
 using Unicorn.Taf.Api;
 using Unicorn.Taf.Core.Engine;
 using Unicorn.Taf.Core.Testing.Attributes;
-using Unicorn.TestAdapter.NetCore;
 
-namespace Unicorn.TestAdapter
+namespace Unicorn.TestAdapter.NetCore
 {
     public class LoadContextObserver : IDataCollector
     {
