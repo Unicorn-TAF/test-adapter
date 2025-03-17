@@ -9,6 +9,7 @@ using System.Xml.Linq;
 using Unicorn.Taf.Core.Engine;
 using UnicornOutcome = Unicorn.Taf.Core.Testing.TestOutcome;
 using UnicornStatus = Unicorn.Taf.Core.Testing.Status;
+using UnicornAttachment = Unicorn.Taf.Core.Testing.Attachment;
 
 namespace Unicorn.TestAdapter.Util
 {
@@ -44,7 +45,7 @@ namespace Unicorn.TestAdapter.Util
             frameworkHandle.RecordResult(testResult);
         }
 
-        internal static TestResult GetTestResultFromOutcome(UnicornOutcome outcome, TestCase testCase)
+        internal static TestResult GetTestResultFromOutcome(UnicornOutcome outcome, TestCase testCase, Logger logger)
         {
             var testResult = new TestResult(testCase)
             {
@@ -71,6 +72,24 @@ namespace Unicorn.TestAdapter.Util
                 default:
                     testResult.Outcome = TestOutcome.None;
                     break;
+            }
+
+            if (outcome.Defect != null)
+            {
+                string info = "Related defect ID: " + outcome.Defect.Id + Environment.NewLine + Environment.NewLine;
+                testResult.Messages.Add(new TestResultMessage(TestResultMessage.StandardOutCategory, info));
+            }
+
+            if (!string.IsNullOrEmpty(outcome.Output))
+            {
+                testResult.Messages.Add(new TestResultMessage(TestResultMessage.StandardOutCategory, outcome.Output));
+            }
+
+            AttachmentSet attachmentSet = CollectAttachments(outcome, logger);
+
+            if (attachmentSet.Attachments.Count > 0)
+            {
+                testResult.Attachments.Add(attachmentSet);
             }
 
             return testResult;
@@ -140,6 +159,30 @@ namespace Unicorn.TestAdapter.Util
             {
                 return new Guid(md5.ComputeHash(Encoding.Unicode.GetBytes(data)));
             }
+        }
+
+        private static AttachmentSet CollectAttachments(UnicornOutcome outcome, Logger logger)
+        {
+            AttachmentSet attachmentSet = new AttachmentSet(new Uri(Constants.ExecutorUriString), "Attachments");
+
+            foreach (UnicornAttachment attachment in outcome.Attachments)
+            {
+                try
+                {
+                    Uri fileUri = new Uri(attachment.FilePath, UriKind.Absolute);
+                    attachmentSet.Attachments.Add(new UriDataAttachment(fileUri, attachment.Name));
+                }
+                catch (UriFormatException ex)
+                {
+                    logger.Warn($"Ignoring attachment with path '{attachment.FilePath}' due to problem with path: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    logger.Warn($"Ignoring attachment with path '{attachment.FilePath}': {ex.Message}.");
+                }
+            }
+
+            return attachmentSet;
         }
     }
 }
