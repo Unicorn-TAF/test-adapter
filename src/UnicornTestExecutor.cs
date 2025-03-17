@@ -134,7 +134,7 @@ namespace Unicorn.TestAdapter
                 {
                     foreach (var outcomeToRecord in outcomes)
                     {
-                        var testResult = AdapterUtils.GetTestResultFromOutcome(outcomeToRecord, test);
+                        var testResult = AdapterUtils.GetTestResultFromOutcome(outcomeToRecord, test, logger);
                         fwHandle.RecordResult(testResult);
                     }
                 }
