@@ -13,6 +13,6 @@ namespace Unicorn.TestAdapter.NetCore
         /// <summary>
         /// Gets list of observed test infos.
         /// </summary>
-        public List<TestInfo> TestInfoList { get; } = new List<TestInfo>();
+        public List<TestInfo> TestInfoList { get; set; } = new List<TestInfo>();
     }
 }

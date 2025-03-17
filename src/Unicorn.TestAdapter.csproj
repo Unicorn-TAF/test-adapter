@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net462;netcoreapp3.1</TargetFrameworks>
@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Unicorn.Taf.Core" Version="4.0.0"/> 
+    <PackageReference Include="Unicorn.Taf.Core" Version="4.2.0"/>
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
