@@ -68,8 +68,8 @@ namespace Unicorn.TestAdapter.NetCore
                 IOutcome ioutcome = runner.RunTests();
 
                 // Outcome transition between load contexts.
-                byte[] bytes = LoadContextSerialization.Serialize(ioutcome);
-                return LoadContextSerialization.Deserialize<LaunchOutcome>(bytes);
+                string data = LoadContextSerialization.Serialize(ioutcome);
+                return LoadContextSerialization.Deserialize<LaunchOutcome>(data);
             }
             finally
             {

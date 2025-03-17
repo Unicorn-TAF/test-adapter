@@ -114,11 +114,12 @@ namespace Unicorn.TestAdapter
         {
             if (!outcome.RunInitialized)
             {
-                logger.Error(Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException);
+                string ex = outcome.InitFailMessage + Environment.NewLine + outcome.InitFailStackTrace;
+                logger.Error(Constants.RunInitFailed + Environment.NewLine + ex);
 
                 foreach (TestCase test in tests)
                 {
-                    AdapterUtils.SkipTest(test, Constants.RunInitFailed + Environment.NewLine + outcome.RunnerException.ToString(), fwHandle);
+                    AdapterUtils.SkipTest(test, Constants.RunInitFailed + Environment.NewLine + ex, fwHandle);
                 }
 
                 return;

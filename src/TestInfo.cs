@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using Unicorn.Taf.Core.Testing.Attributes;
@@ -13,6 +12,8 @@ namespace Unicorn.TestAdapter
     [Serializable]
     public class TestInfo
     {
+        public TestInfo() { }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TestInfo"/> class based on <see cref="MethodInfo"/>.
         /// </summary>
@@ -33,12 +34,12 @@ namespace Unicorn.TestAdapter
 
             IEnumerable<CategoryAttribute> categoryAttributes = methodInfo.GetCustomAttributes<CategoryAttribute>(true);
 
-            Categories = new ReadOnlyCollection<string>(categoryAttributes.Select(a => a.Category).ToList());
+            Categories = new List<string>(categoryAttributes.Select(a => a.Category).ToList());
 
 
             IEnumerable<TagAttribute> tagsAttributes = methodInfo.DeclaringType.GetCustomAttributes<TagAttribute>(true);
 
-            Tags = new ReadOnlyCollection<string>(tagsAttributes.Select(a => a.Tag).ToList());
+            Tags = new List<string>(tagsAttributes.Select(a => a.Tag).ToList());
 
             TestParametersCount = 
                 methodInfo.IsDefined(typeof(TestDataAttribute), true) ? methodInfo.GetParameters().Length : 0;
@@ -47,41 +48,41 @@ namespace Unicorn.TestAdapter
         /// <summary>
         /// Gets test method name.
         /// </summary>
-        public string MethodName { get; }
+        public string MethodName { get; set; }
 
         /// <summary>
-        /// Gets test mathod class path.
+        /// Gets test method class path.
         /// </summary>
-        public string ClassPath { get; }
+        public string ClassPath { get; set; }
 
         /// <summary>
         /// Gets test title.
         /// </summary>
-        public string Title { get; }
+        public string Title { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether test is disabled or not.
         /// </summary>
-        public bool Disabled { get; }
+        public bool Disabled { get; set; }
 
         /// <summary>
         /// Gets test author.
         /// </summary>
-        public string Author { get; }
+        public string Author { get; set; }
 
         /// <summary>
         /// Gets collection of test categories.
         /// </summary>
-        public ReadOnlyCollection<string> Categories { get; }
+        public List<string> Categories { get; set; }
 
         /// <summary>
         /// Gets collection of test tags.
         /// </summary>
-        public ReadOnlyCollection<string> Tags { get; }
+        public List<string> Tags { get; set; }
 
         /// <summary>
         /// Gets count of test parameters.
         /// </summary>
-        public int TestParametersCount { get; }
+        public int TestParametersCount { get; set; }
     }
 }

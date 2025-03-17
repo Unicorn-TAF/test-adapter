@@ -57,8 +57,8 @@ namespace Unicorn.TestAdapter.NetCore
                 IOutcome iTestInfo = observer.CollectData(testAssembly);
 
                 //Outcome transition between load contexts.
-                byte[] bytes = LoadContextSerialization.Serialize(iTestInfo);
-                ObserverOutcome outcome = LoadContextSerialization.Deserialize<ObserverOutcome>(bytes);
+                string data = LoadContextSerialization.Serialize(iTestInfo);
+                ObserverOutcome outcome = LoadContextSerialization.Deserialize<ObserverOutcome>(data);
 
                 return outcome.TestInfoList;
             }
