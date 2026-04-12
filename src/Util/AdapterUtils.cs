@@ -67,7 +67,7 @@ namespace Unicorn.TestAdapter.Util
                     break;
                 case UnicornStatus.Skipped:
                     testResult.Outcome = TestOutcome.Skipped;
-                    testResult.ErrorMessage = "Check for fails in: BeforeSuite, BeforeTest or test specified in DependsOn attribute.";
+                    testResult.ErrorMessage = outcome.FailMessage;
                     break;
                 default:
                     testResult.Outcome = TestOutcome.None;
@@ -104,7 +104,7 @@ namespace Unicorn.TestAdapter.Util
                 DisplayName = testInfo.MethodName,
                 Id = GuidFromString(fullName)
             };
-            
+
             if (testInfo.Disabled)
             {
                 testcase.Traits.Add(new Trait(Constants.DisabledTrait, "true"));
